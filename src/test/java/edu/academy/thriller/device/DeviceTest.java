@@ -3,6 +3,7 @@ package edu.academy.thriller.device;
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -14,6 +15,7 @@ import akka.actor.testkit.typed.javadsl.TestKitJunitResource;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
 import edu.academy.thriller.device.group.DeviceGroup;
+import edu.academy.thriller.device.management.DeviceManager;
 import edu.academy.thriller.device.management.DeviceRegistered;
 import edu.academy.thriller.device.management.ReplyDeviceList;
 import edu.academy.thriller.device.management.RequestDeviceList;
@@ -171,6 +173,50 @@ public class DeviceTest {
 
                     return null;
                 });
+
+    }
+
+    @Test
+    public void testEmptyListActiveDevicesFromRoot() {
+        TestProbe<ReplyDeviceList> deviceListProbe = testKit.createTestProbe(ReplyDeviceList.class);
+
+        ActorRef<DeviceManager.Command> deviceManager = testKit.spawn(DeviceManager.create());
+
+        deviceManager.tell(new RequestDeviceList(0L, "1", deviceListProbe.getRef()));
+        ReplyDeviceList replyDeviceList = deviceListProbe.receiveMessage();
+        assertEquals(0L, replyDeviceList.requestId);
+        assertEquals(Collections.emptySet(), replyDeviceList.ids);
+
+    }
+
+    @Test
+    public void testListActiveDevicesAfterRegistration() {
+
+        TestProbe<DeviceRegistered> deviceARegistered = testKit.createTestProbe(DeviceRegistered.class);
+
+        ActorRef<DeviceManager.Command> deviceManager = testKit.spawn(DeviceManager.create());
+
+        deviceManager.tell(new RequestTrackDevice("1", "A", deviceARegistered.getRef()));
+        deviceManager.tell(new RequestTrackDevice("1", "B", deviceARegistered.getRef()));
+        deviceManager.tell(new RequestTrackDevice("1", "A", deviceARegistered.getRef()));
+
+        deviceManager.tell(new RequestTrackDevice("2", "A", deviceARegistered.getRef()));
+        deviceManager.tell(new RequestTrackDevice("2", "C", deviceARegistered.getRef()));
+
+
+        ReplyDeviceList replyDeviceList;
+        TestProbe<ReplyDeviceList> deviceListProbe = testKit.createTestProbe(ReplyDeviceList.class);
+        deviceManager.tell(new RequestDeviceList(0L, "1", deviceListProbe.getRef()));
+
+        replyDeviceList = deviceListProbe.receiveMessage();
+        assertEquals(0L, replyDeviceList.requestId);
+        assertEquals(Stream.of("A", "B").collect(Collectors.toSet()), replyDeviceList.ids);
+
+        deviceManager.tell(new RequestDeviceList(1L, "2", deviceListProbe.getRef()));
+
+        replyDeviceList = deviceListProbe.receiveMessage();
+        assertEquals(1L, replyDeviceList.requestId);
+        assertEquals(Stream.of("A", "C").collect(Collectors.toSet()), replyDeviceList.ids);
 
     }
 

@@ -3,7 +3,7 @@ package edu.academy.thriller.device.management;
 import akka.actor.typed.ActorRef;
 import edu.academy.thriller.device.group.DeviceGroup;
 
-public class RequestDeviceList implements DeviceGroup.Command {
+public class RequestDeviceList implements DeviceManager.Command, DeviceGroup.Command {
 
     public final long requestId;
     public final String groupId;
