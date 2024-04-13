@@ -31,11 +31,16 @@ public class Device extends AbstractBehavior<Device.Command> {
         return Behaviors.setup(context -> new Device(context, groupId, deviceId));
     }
 
+    static enum PASSIVATE implements Command {
+        INSTANCE
+    }
+
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
                 .onMessage(ReadTemperature.class, this::onReadTemperature)
                 .onMessage(RecordTemperature.class, this::onRecordTemperature)
+                .onMessage(PASSIVATE.class, m ->   Behaviors.stopped())
                 .onSignal(PostStop.class, sgl -> onPostStop())
                 .build();
     }
