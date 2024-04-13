@@ -1,4 +1,4 @@
-package edu.academy.thriller.message;
+package edu.academy.thriller.device;
 
 public class TemperatureRecorded {
 

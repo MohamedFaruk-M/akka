@@ -1,8 +1,8 @@
-package edu.academy.thriller.message;
+package edu.academy.thriller.device;
 
 import akka.actor.typed.ActorRef;
 
-public class RecordTemperature implements Command {
+public class RecordTemperature implements Device.Command {
 
     public final long requestId;
     public final double value;

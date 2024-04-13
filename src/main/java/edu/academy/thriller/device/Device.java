@@ -1,4 +1,4 @@
-package edu.academy.thriller.component;
+package edu.academy.thriller.device;
 
 import java.util.Optional;
 
@@ -8,30 +8,27 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
-import akka.japi.function.Function;
-import edu.academy.thriller.message.Command;
-import edu.academy.thriller.message.ReadTemperature;
-import edu.academy.thriller.message.RecordTemperature;
-import edu.academy.thriller.message.RespondTemperature;
-import edu.academy.thriller.message.TemperatureRecorded;
 
-public class Device extends AbstractBehavior<Command> {
+public class Device extends AbstractBehavior<Device.Command> {
+    public interface Command {
+    }
 
     private final String deviceId;
+
     private final String groupId;
 
     private Optional<Double> lastTemperatureReading = Optional.empty();
 
-    public Device(ActorContext<Command> context, String deviceId, String groupId) {
+    public Device(ActorContext<Command> context, String groupId, String deviceId) {
         super(context);
-        this.deviceId = deviceId;
         this.groupId = groupId;
+        this.deviceId = deviceId;
 
-        getContext().getLog().info("Device actor {}-{} started successfully :-)", deviceId, groupId);
+        getContext().getLog().info("Device actor {}-{} started successfully :-)", groupId, deviceId);
     }
 
-    public static Behavior<Command> create(String deviceId, String groupId) {
-        return Behaviors.setup(context -> new Device(context, deviceId, groupId));
+    public static Behavior<Command> create(String groupId, String deviceId) {
+        return Behaviors.setup(context -> new Device(context, groupId, deviceId));
     }
 
     @Override
@@ -39,11 +36,12 @@ public class Device extends AbstractBehavior<Command> {
         return newReceiveBuilder()
                 .onMessage(ReadTemperature.class, this::onReadTemperature)
                 .onMessage(RecordTemperature.class, this::onRecordTemperature)
-                .onSignal(PostStop.class, onPostStop())
+                .onSignal(PostStop.class, sgl -> onPostStop())
                 .build();
     }
 
     private Behavior<Command> onReadTemperature(ReadTemperature read) {
+        getContext().getLog().info("Reading present temperature value {} for request {}", lastTemperatureReading, read.requestId);
         read.replyTo.tell(new RespondTemperature(read.requestId, lastTemperatureReading));
         return this;
     }
@@ -55,8 +53,9 @@ public class Device extends AbstractBehavior<Command> {
         return this;
     }
 
-    private Function<PostStop, Behavior<Command>> onPostStop() {
-        getContext().getLog().error("Device actor {}-{} stopped unexpectedly :-(", deviceId, groupId);
-        return null;
+    private Behavior<Command> onPostStop() {
+        getContext().getLog().error("Device actor {}-{} stopped unexpectedly :-(", groupId, deviceId);
+        return this;
     }
+
 }
